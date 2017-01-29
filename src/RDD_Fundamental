@@ -1,0 +1,37 @@
+RDD
+***
+-- RDD(Resilient distribute datasets) are the lifeblood of spark.
+-- RDD are read-only and partitioned.
+-- The key features to an RDD is its ability to track lineage. Because an RDD is only realized on certain commands, it need to track
+    lineage of commands placed upon it to retace
+
+Example of lineage
+******************
+val hdfsFile = "hdfs://localhost:9000/input/README.md"
+val textFile = sc.textFile(hdfsFile)
+textFile.getNumPartitions
+textFile.toDebugString
+val mapRDD=textFile.map(line=>line++"")
+
+Note: We can see from above that , when discussing lineage, the way to actually display it is through the .toDebugString Method
+
+-- Lineage is the exactly capability for an RDD to continuously reponds to failure within the system. When individual task fail
+   and are relaunched by the resource scheduler of choice, those tasks look back within the lineage and determine what needs
+   to be redone for the task to be considered complete.
+
+-- RDDs can checkpoint that lineage to disk, this acts as a metaphorical "save point" for the data , making it much easier to recompute
+   failure at the task level, which is especially vital for long running Spak application.
+
+Example-2
+***********
+sc.setCheckpointDir("hdfs://localhost:9000/checkpoint")
+val hdfsFile = "hdfs://localhost:9000/input/README.md"
+val textFile = sc.textFile(hdfsFile)
+val mapRDD=textFile.map(line=>line.split(' '))
+mapRDD.collect
+val stringRDD=mapRDD.map(a=>a.toSet)
+
+Note: In the above example we read the small file, performed some computations on it, and then checkpoint  the RDD, therefore maintaing
+      the lineage on disk. The keu to note is the bolded method and primarily that of sc.setCheckPointDir that must be set before
+      the checkoint can occur. It is good practice , we shoudl choose the hdfs path as checkpointing directory so that
+      all executor can  reach.

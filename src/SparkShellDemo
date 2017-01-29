@@ -1,0 +1,107 @@
+/**
+  * Created by samir on 29/1/17.
+*/
+To exit scala prompt
+---------------------
+:quit
+:help
+--------------------------------
+-----------------------------------------------------------------------
+Core information:
+*********************
+RedHat:
+---------
+command: sysctl -n hw.ncpu
+####################################################
+For Ubuntu OS :
+ -----------------------
+command: cat /proc/cpuinfo | grep processor | wc -l
+command: cat /proc/cpuinfo | grep 'core id'
+commnad: lscpu
+-------------------------------------------------------------------
+
+Spark-Shell Program to find the line which contains only word "Spark"
+************************************************************************
+val hdfsFile = "hdfs://localhost:9000/input/README.md"
+val textFile = sc.textFile(hdfsFile)
+textFile.getNumPartitions
+
+//textFile.coalesce(4).cache()
+
+textFile.collect() // to collect data from worker to driver
+textFile.take(5).foreach(println)
+val linesContainingSpark = textFile.filter(line => line.contains("Spark"))
+linesContainingSpark.take(5).foreach(println)
+linesContainingSpark.first()
+---------------------------------------------------------------
+How to read/create DataFrame from CSV file
+**************************************************************************
+case class Pet(name:String,race:String)
+val textFileRDD=sc.textFile("hdfs://localhost:9000/input/datafile.csv");
+val schemaLine= textFileRDD.first()
+val noHeaderRdd=textFileRDD.filter(line=> !line.equals(schemaLine))
+val petRDD=noHeaderRdd.map(textLine=>{
+  val columns=textLine.split(',')
+  Pet(columns(0),columns(1))})
+val petDF=petRDD.toDF()
+petDF.show()
+petDF.printSchema()
+petDF.select("name").show()
+petDF.filter(petDF("race") > 100).show() // filter where race > 100
+petDF.filter(petDF("name")==="A").show()
+
+------------------------------------------------------------------------
+Creating RDD from Memory-using parallelize
+***************************************************************************
+sc.parallelize(1 to 100).count
+
+/*
+  -- When you execute the Spark job, i.e. sc.parallelize(1 to 100).count, you should see 4/4 for this system bcz in
+     this machine 4 core is available
+*/
+
+sc.parallelize(1 to 100, 2).count
+val ints = sc.parallelize(1 to 100, 2)
+ints.partitions.size
+
+Note: You can always ask for the number of partitions using partitions method of a RDD:
+----------------------------------------------------------------------------
+
+textFile.repartition(5).count
+val tt=textFile.repartition(100000).count
+
+
+Example of the Wordcount
+*******************************************
+
+https://blog.knoldus.com/2015/06/19/shufflling-and-repartitioning-of-rdds-in-apache-spark/
+
+1. Number of partitions when creating RDD
+----------------------------------------------
+
+val hdfsFile = "hdfs://localhost:9000/input/README.md"
+val rdd= sc.textFile(hdfsFile,5)
+
+2 . reduceByKey Vs. groupByKey
+------------------------------------------------
+val wordPairsRDD = rdd.map(word => (word, 1))
+val wordCountsWithReduce = wordPairsRDD.reduceByKey(_ + _).collect()
+
+
+val wordPairsRDD = rdd.map(word => (word, 1))
+val wordCountsWithReduce = wordPairsRDD
+  .reduceByKey(_ + _)
+  .collect()
+
+3. Hash-partition before transformation over pair RDD
+  --------------------------------------------
+val wordPairsRDD = rdd.map(word => (word, 1)).partitonBy(new HashPartition(4))
+val wordCountsWithReduce = wordPairsRDD.reduceByKey(_ + _).collect()
+
+---------------------------------------------------------
+
+Using SQL :
+***********
+val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+
+import sqlContext.implicits._
